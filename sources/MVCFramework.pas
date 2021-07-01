@@ -725,7 +725,8 @@ type
     procedure Render(const ATextWriter: TTextWriter; const AOwns: Boolean = True); overload;
     procedure Render(const AStream: TStream; const AOwns: Boolean = True); overload;
     procedure Render(const AErrorCode: Integer; const AErrorMessage: string = '';
-      const AErrorClassName: string = ''; const ADataObject: TObject = nil); overload;
+      const AErrorReasonString: string = ''; const AErrorClassName: string = '';
+      const ADataObject: TObject = nil); overload;
     procedure Render(const AException: Exception; AExceptionItems: TList<string> = nil;
       const AOwns: Boolean = True); overload;
     procedure Render(const AResponse: TMVCResponse; const AOwns: Boolean = True); overload;
@@ -3591,17 +3592,23 @@ begin
 end;
 
 procedure TMVCRenderer.Render(const AErrorCode: Integer;
-const AErrorMessage, AErrorClassName: string; const ADataObject: TObject);
+const AErrorMessage, AErrorReasonString, AErrorClassName: string; const ADataObject: TObject);
 var R: TMVCErrorResponse;
 begin
-  ResponseStatus(AErrorCode, AErrorMessage);
+  if AErrorReasonString <> '' then
+    ResponseStatus(AErrorCode, AErrorReasonString)
+  else
+    ResponseStatus(AErrorCode, AErrorMessage);
   R := TMVCErrorResponse.Create;
   try
     R.StatusCode := AErrorCode;
-    if ((R.StatusCode div 100) = 2) then
-      R.ReasonString := 'ok'
+    if AErrorReasonString <> '' then
+      R.ReasonString := AErrorReasonString
     else
-      R.ReasonString := 'error';
+      if ((R.StatusCode div 100) = 2) then
+        R.ReasonString := 'ok'
+      else
+        R.ReasonString := 'error';
     R.Message := AErrorMessage;
     R.Classname := AErrorClassName;
     R.Data := ADataObject;
